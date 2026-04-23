@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Theo Dõi Tiến Độ PC08 / PC09</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --orange: #ffa657;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #58a6ff, #bc8cff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+  .header p { color: var(--muted); font-size: .9rem; }
+
+  .as-of {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: .82rem;
+    color: var(--muted);
+    margin-bottom: 32px;
+  }
+  .as-of span { color: var(--accent); font-weight: 600; }
+
+  /* ── KPI row ── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 16px;
+    text-align: center;
+  }
+  .kpi .label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 6px; }
+  .kpi .value { font-size: 2rem; font-weight: 800; }
+  .kpi .sub { font-size: .75rem; color: var(--muted); margin-top: 4px; }
+
+  /* ── Progress cards ── */
+  .section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 14px;
+  }
+
+  /* ── vertical target sections ── */
+  .target-cols {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    margin-bottom: 32px;
+  }
+  .target-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .target-col-header {
+    font-size: .82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    padding: 10px 16px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .target-col-header.t1 { background: rgba(88,166,255,.12); color: #58a6ff; border: 1px solid rgba(88,166,255,.3); }
+  .target-col-header.t2 { background: rgba(63,185,80,.12);  color: #3fb950; border: 1px solid rgba(63,185,80,.3); }
+  .progress-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px,1fr));
+    gap: 14px;
+  }
+  .pc09-divider {
+    border: none;
+    border-top: 1px dashed var(--border);
+    margin: 16px 0 14px;
+  }
+  .pc09-label {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--orange);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .prog-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .prog-card .title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+  .prog-card .deadline {
+    font-size: .75rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .deadline .badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: .7rem;
+  }
+
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .metric-row .mlabel { font-size: .82rem; color: var(--muted); }
+  .metric-row .mval { font-size: .9rem; font-weight: 700; }
+
+  .bar-wrap {
+    background: var(--surface2);
+    border-radius: 6px;
+    height: 10px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width .6s ease;
+  }
+
+  .need-per-week {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .need-per-week .nlabel { font-size: .78rem; color: var(--muted); }
+  .need-per-week .nval { font-size: 1.4rem; font-weight: 800; }
+  .need-per-week .nunit { font-size: .72rem; color: var(--muted); }
+
+  /* ── Table ── */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--surface2);
+    padding: 12px 14px;
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--muted);
+    font-weight: 600;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 11px 14px; font-size: .85rem; white-space: nowrap; }
+  .chip {
+    display: inline-block;
+    border-radius: 8px;
+    padding: 2px 9px;
+    font-size: .72rem;
+    font-weight: 600;
+  }
+  .chip-green  { background: rgba(63,185,80,.15);  color: var(--green);  }
+  .chip-yellow { background: rgba(210,153,34,.15); color: var(--yellow); }
+  .chip-red    { background: rgba(248,81,73,.15);  color: var(--red);    }
+  .chip-blue   { background: rgba(88,166,255,.15); color: var(--accent); }
+
+  /* ── Weekly tracker ── */
+  .week-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .add-btn {
+    background: linear-gradient(135deg, #238636, #2ea043);
+    border: none;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .add-btn:hover { opacity: .85; }
+
+  .week-table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+  .week-table-wrap input[type=number],
+  .week-table-wrap input[type=text],
+  .week-table-wrap input[type=date] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 4px 8px;
+    font-size: .82rem;
+    font-family: inherit;
+    width: 80px;
+  }
+  .week-table-wrap input[type=text] { width: 110px; }
+  .week-table-wrap input[type=date] { width: 130px; }
+  .del-btn {
+    background: rgba(248,81,73,.15);
+    border: none;
+    color: var(--red);
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: .8rem;
+    font-family: inherit;
+  }
+  .del-btn:hover { background: rgba(248,81,73,.3); }
+
+  /* ── Snapshot / Trend ── */
+  .snap-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow-x: auto;
+    margin-bottom: 32px;
+  }
+  .snap-wrap table { min-width: 780px; }
+  .delta {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 6px;
+    font-size: .75rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .delta-up   { background: rgba(63,185,80,.15);  color: var(--green);  }
+  .delta-down { background: rgba(248,81,73,.15);  color: var(--red);    }
+  .delta-zero { background: var(--surface2);      color: var(--muted);  }
+  .snap-wrap input[type=number] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 4px 6px;
+    font-size: .82rem;
+    font-family: inherit;
+    width: 68px;
+    text-align: center;
+  }
+  .snap-wrap input[type=datetime-local],
+  .snap-wrap input[type=text] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 4px 6px;
+    font-size: .78rem;
+    font-family: inherit;
+  }
+  .snap-wrap input[type=datetime-local] { width: 170px; }
+  .snap-wrap input[type=text] { width: 120px; }
+
+  /* ── Footer ── */
+  footer { text-align: center; color: var(--muted); font-size: .75rem; padding-top: 16px; }
+
+  @media (max-width: 600px) {
+    .header h1 { font-size: 1.4rem; }
+    .kpi .value { font-size: 1.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+  <div class="header">
+    <h1>📋 Theo Dõi Tiến Độ PC08 / PC09</h1>
+    <p>Bảng thống kê và đánh giá tiến độ phương án</p>
+  </div>
+
+  <div style="display:flex;justify-content:center;margin-bottom:32px;">
+    <div class="as-of">📅 Cập nhật lần cuối: <span id="lastUpdate">23/04/2026</span>
+      &nbsp;|&nbsp; Ngày hiện tại: <span id="todayDisp"></span>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <!-- Progress vs targets -->
+  <div class="section-title">⏳ So sánh với chỉ tiêu</div>
+  <div class="target-cols" id="progressGrid"></div>
+
+
+  <!-- Snapshot / Trend section -->
+  <div class="week-header">
+    <div class="section-title" style="margin:0;">📈 Diễn biến tăng giảm hồ sơ</div>
+    <button class="add-btn" onclick="addSnapshot()" style="background:linear-gradient(135deg,#6e40c9,#9263de);">＋ Thêm thời điểm kiểm đếm</button>
+  </div>
+  <div class="snap-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Thời điểm kiểm đếm</th>
+          <th>PC08 đã ký</th>
+          <th>Δ ký</th>
+          <th>PC08 đóng dấu</th>
+          <th>Δ dấu</th>
+          <th>PC08 chưa ký</th>
+          <th>Δ chưa ký</th>
+          <th>PC09 ký</th>
+          <th>PC09 dấu</th>
+          <th>Ghi chú</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="snapTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Chi tiết theo nhân sự (LAST) -->
+  <div class="section-title">👤 Chi tiết theo nhân sự</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Họ Tên</th><th>Tổng PC08</th>
+          <th>Đã ký (chưa đóng dấu)</th><th>Đã ký + Đóng dấu</th>
+          <th>Chưa ký</th><th>PC09</th><th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody id="personTable"></tbody>
+      <tfoot id="personFoot"></tfoot>
+    </table>
+  </div>
+
+</div>
+
+<footer>Phiên bản 1.0 — Cập nhật thủ công</footer>
+
+<script>
+/* ─── DATA ─── */
+const SNAPSHOT_DATE = new Date('2026-04-23');
+const TARGET1_DATE  = new Date('2026-06-30');
+const TARGET2_DATE  = new Date('2026-10-14');
+const TARGET1_PC08  = 744;
+const TARGET2_PC08  = 1372 + 110;  // 1482
+const TARGET2_PC09  = 6;
+
+const people = [
+  { name:'TRẦN THIỆN PHONG',   total:48,  signed:44,  stamped:0,  unsigned:4,  pc09s:0, pc09d:0 },
+  { name:'VŨ MINH HIẾU',       total:26,  signed:22,  stamped:0,  unsigned:4,  pc09s:1, pc09d:0 },
+  { name:'TRẦN ĐỨC LƯƠNG',     total:27,  signed:27,  stamped:0,  unsigned:0,  pc09s:0, pc09d:0 },
+  { name:'ĐOÀN VIỆT HÙNG (4)', total:16,  signed:16,  stamped:0,  unsigned:0,  pc09s:0, pc09d:0 },
+  { name:'LÊ ĐÌNH SƠN',        total:5,   signed:5,   stamped:0,  unsigned:0,  pc09s:0, pc09d:0 },
+  { name:'NGUYỄN TUẤN VŨ',     total:41,  signed:41,  stamped:0,  unsigned:0,  pc09s:0, pc09d:0 },
+  { name:'TRẦN HỮU LONG',      total:53,  signed:42,  stamped:7,  unsigned:4,  pc09s:0, pc09d:0 },
+  { name:'PHAN TUẤN DŨNG',     total:27,  signed:27,  stamped:0,  unsigned:0,  pc09s:0, pc09d:0 },
+  { name:'ĐOÀN VIỆT HÙNG (9)', total:45,  signed:45,  stamped:0,  unsigned:0,  pc09s:0, pc09d:0 },
+  { name:'NGUYỄN ĐỨC THỊNH',  total:6,   signed:5,   stamped:0,  unsigned:1,  pc09s:0, pc09d:0 },
+  { name:'NGUYỄN PHÚC HẬU',   total:1,   signed:1,   stamped:0,  unsigned:0,  pc09s:0, pc09d:0 },
+  { name:'ĐOÀN CHÍ HIẾU',     total:1,   signed:1,   stamped:0,  unsigned:0,  pc09s:0, pc09d:0 },
+  { name:'PHÙNG ĐOÀI HẢI',    total:1,   signed:1,   stamped:0,  unsigned:0,  pc09s:1, pc09d:1 },
+  { name:'NGUYỄN VIỆT HÀ',    total:13,  signed:11,  stamped:0,  unsigned:2,  pc09s:0, pc09d:0 },
+  { name:'NGUYỄN TÙNG LÂM',   total:1,   signed:0,   stamped:0,  unsigned:1,  pc09s:0, pc09d:0 },
+  { name:'TRẦN THANH LIÊM',   total:14,  signed:12,  stamped:0,  unsigned:2,  pc09s:0, pc09d:0 },
+  { name:'NGUYỄN ĐÌNH LIÊM',  total:9,   signed:6,   stamped:0,  unsigned:3,  pc09s:0, pc09d:0 },
+  { name:'VŨ QUỐC PHONG',     total:1,   signed:1,   stamped:0,  unsigned:0,  pc09s:0, pc09d:0 },
+];
+
+/* ─── Aggregate ─── */
+const tot = people.reduce((a,p)=>({
+  total:   a.total   + p.total,
+  signed:  a.signed  + p.signed,   // đã ký CHƯA đóng dấu
+  stamped: a.stamped + p.stamped,  // đã ký VÀ đóng dấu
+  unsigned:a.unsigned+ p.unsigned,
+  pc09s:   a.pc09s   + p.pc09s,
+  pc09d:   a.pc09d   + p.pc09d,
+}),{total:0,signed:0,stamped:0,unsigned:0,pc09s:0,pc09d:0});
+
+// signed  = đã ký chưa đóng dấu (KHÔNG gộp stamped)
+// stamped = đã ký VÀ đóng dấu
+const signedOnly = tot.signed;   // 307 — chỉ đã ký chưa đóng dấu
+const stampedAll = tot.stamped;  // 7
+
+/* ─── Week math ─── */
+function weeksLeft(from, to) {
+  return Math.max((to - from) / (7*86400*1000), 0);
+}
+const today = new Date();
+const weeks1 = weeksLeft(today, TARGET1_DATE);
+const weeks2 = weeksLeft(today, TARGET2_DATE);
+
+/* ─── KPI ─── */
+function renderKPI() {
+  const kpis = [
+    { label:'Tổng PC08 hiện tại',         value: tot.total,   sub:'phương án',                                                               color:'#58a6ff' },
+    { label:'Đã ký (chưa đóng dấu)',       value: signedOnly,  sub:`${((signedOnly/TARGET1_PC08)*100).toFixed(1)}% so chỉ tiêu 30/6`,         color:'#3fb950' },
+    { label:'Đã ký + Đóng dấu',           value: stampedAll,  sub:`${((stampedAll/TARGET1_PC08)*100).toFixed(1)}% so chỉ tiêu 30/6`,         color:'#bc8cff' },
+    { label:'Chưa ký',                     value: tot.unsigned,sub:'phương án',                                                               color:'#f85149' },
+    { label:'PC09 đã ký',                  value: tot.pc09s,   sub:`Chỉ tiêu: ${TARGET2_PC09}`,                                               color:'#ffa657' },
+    { label:'PC09 đóng dấu',               value: tot.pc09d,   sub:`Chỉ tiêu: ${TARGET2_PC09}`,                                               color:'#d29922' },
+  ];
+  document.getElementById('kpiRow').innerHTML = kpis.map(k=>`
+    <div class="kpi">
+      <div class="label">${k.label}</div>
+      <div class="value" style="color:${k.color}">${k.value}</div>
+      <div class="sub">${k.sub}</div>
+    </div>`).join('');
+}
+
+/* ─── Progress cards ─── */
+function progressCard(title, deadline, weeksRemaining, current, target, colorHex) {
+  const pct = Math.min((current/target)*100, 100);
+  const remaining = Math.max(target - current, 0);
+  const perWeek = weeksRemaining > 0 ? (remaining / weeksRemaining).toFixed(1) : '—';
+  const wLabel = weeksRemaining.toFixed(1);
+  const statusColor = pct >= 75 ? 'var(--green)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+  return `
+  <div class="prog-card">
+    <div class="title">${title}</div>
+    <div class="deadline">⏰ ${deadline} <span class="badge">${wLabel} tuần còn lại</span></div>
+    <div class="metric-row">
+      <span class="mlabel">Hiện tại / Chỉ tiêu</span>
+      <span class="mval">${current} / ${target}</span>
+    </div>
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:${pct}%;background:${colorHex}"></div>
+    </div>
+    <div class="metric-row">
+      <span class="mlabel">Tỷ lệ hoàn thành</span>
+      <span class="mval" style="color:${statusColor}">${pct.toFixed(1)}%</span>
+    </div>
+    <div class="metric-row">
+      <span class="mlabel">Còn thiếu</span>
+      <span class="mval">${remaining} phương án</span>
+    </div>
+    <div class="need-per-week">
+      <div><div class="nlabel">Cần đạt mỗi tuần</div><div class="nunit">(từ hôm nay)</div></div>
+      <div style="text-align:right">
+        <span class="nval" style="color:${colorHex}">${perWeek}</span>
+        <span class="nunit"> PA/tuần</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderProgress() {
+  const g = document.getElementById('progressGrid');
+  const pc09Signed  = tot.pc09s;
+  const pc09Stamped = tot.pc09d;
+  // Màu thuần nhất: xanh lam = đã ký, tím = đóng dấu (giống nhau ở cả 2 phần)
+  g.innerHTML = `
+  <div class="target-section">
+    <div class="target-col-header t1">🎯 PHẦN 1 — Chỉ tiêu 30/06/2026 &nbsp;|&nbsp; PC08: ${TARGET1_PC08} phương án</div>
+    <div class="progress-grid">
+      ${progressCard('📝 Đã ký chưa đóng dấu', '30/06/2026', weeks1, signedOnly, TARGET1_PC08, '#58a6ff')}
+      ${progressCard('🔏 Đã ký + Đóng dấu',    '30/06/2026', weeks1, stampedAll, TARGET1_PC08, '#bc8cff')}
+    </div>
+  </div>
+
+  <div class="target-section">
+    <div class="target-col-header t2">🎯 PHẦN 2 — Chỉ tiêu 14/10/2026 &nbsp;|&nbsp; PC08: ${TARGET2_PC08} PA &nbsp;+&nbsp; PC09: ${TARGET2_PC09} PA</div>
+    <div class="progress-grid">
+      ${progressCard('📝 PC08 — Đã ký chưa đóng dấu', '14/10/2026', weeks2, signedOnly, TARGET2_PC08, '#58a6ff')}
+      ${progressCard('🔏 PC08 — Đã ký + Đóng dấu',    '14/10/2026', weeks2, stampedAll, TARGET2_PC08, '#bc8cff')}
+    </div>
+    <hr class="pc09-divider">
+    <div class="pc09-label">📄 So sánh PC09 — Chỉ tiêu 14/10/2026: ${TARGET2_PC09} phương án</div>
+    <div class="progress-grid">
+      ${progressCard('📝 PC09 — Đã ký chưa đóng dấu', '14/10/2026', weeks2, pc09Signed,  TARGET2_PC09, '#ffa657')}
+      ${progressCard('🔏 PC09 — Đã ký + Đóng dấu',    '14/10/2026', weeks2, pc09Stamped, TARGET2_PC09, '#d29922')}
+    </div>
+  </div>`;
+}
+
+/* ─── Person table ─── */
+function renderPersonTable() {
+  const rows = people.map((p,i)=>{
+    // Trạng thái:
+    // - Có chưa ký → chip đỏ/vàng cảnh báo
+    // - Tất cả đã ký nhưng chưa đóng dấu (signed>0, stamped==0, unsigned==0) → chờ đóng dấu
+    // - Chỉ có đóng dấu, không còn ký chờ → hoàn tất
+    let chip;
+    if (p.unsigned > 0) {
+      chip = `<span class="chip chip-yellow">⚠ ${p.unsigned} chưa ký</span>`;
+    } else if (p.signed > 0 && p.stamped === 0) {
+      chip = `<span class="chip chip-blue">🕐 Chờ đóng dấu</span>`;
+    } else if (p.signed > 0 && p.stamped > 0) {
+      chip = `<span class="chip chip-blue">🕐 Chờ đóng dấu (${p.signed} PA)</span>`;
+    } else if (p.stamped > 0 && p.signed === 0 && p.unsigned === 0) {
+      chip = `<span class="chip chip-green">✓ Hoàn tất</span>`;
+    } else {
+      chip = `<span class="chip chip-red">Chưa có</span>`;
+    }
+    const pc09 = (p.pc09s > 0 || p.pc09d > 0)
+      ? `<span style="color:var(--orange)">${p.pc09s} ký / ${p.pc09d} dấu</span>`
+      : '<span style="color:var(--muted)">—</span>';
+    return `<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td><strong>${p.name}</strong></td>
+      <td style="color:var(--accent)">${p.total}</td>
+      <td>${p.signed}</td>
+      <td style="color:var(--purple)">${p.stamped}</td>
+      <td style="color:var(--red)">${p.unsigned || '—'}</td>
+      <td>${pc09}</td>
+      <td>${chip}</td>
+    </tr>`;
+  }).join('');
+
+  const foot = `<tr style="background:var(--surface2);font-weight:700">
+    <td colspan="2" style="color:var(--muted);font-size:.75rem;text-transform:uppercase">TỔNG CỘNG</td>
+    <td style="color:var(--accent)">${tot.total}</td>
+    <td>${tot.signed}</td>
+    <td style="color:var(--purple)">${tot.stamped}</td>
+    <td style="color:var(--red)">${tot.unsigned}</td>
+    <td style="color:var(--orange)">${tot.pc09s} ký / ${tot.pc09d} dấu</td>
+    <td></td>
+  </tr>`;
+
+  document.getElementById('personTable').innerHTML = rows;
+  document.getElementById('personFoot').innerHTML = foot;
+}
+
+
+
+/* ─── Today display ─── */
+function fmt(d) {
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+function fmtDT(isoStr) {
+  if (!isoStr) return '—';
+  const d = new Date(isoStr);
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+document.getElementById('todayDisp').textContent = fmt(today);
+
+/* ─── Snapshot / Trend ─── */
+// Pre-load with baseline snapshot from current dataset
+const BASELINE = {
+  dt: '2026-04-23T11:40:00',
+  signed:  signedOnly,
+  stamped: stampedAll,
+  unsigned: tot.unsigned,
+  pc09s: tot.pc09s,
+  pc09d: tot.pc09d,
+  note: 'Thời điểm kiểm đếm ban đầu'
+};
+
+let snapData = JSON.parse(localStorage.getItem('pc08snaps') || 'null');
+if (!snapData) {
+  snapData = [BASELINE];
+  localStorage.setItem('pc08snaps', JSON.stringify(snapData));
+}
+
+function saveSnaps() { localStorage.setItem('pc08snaps', JSON.stringify(snapData)); }
+
+function deltaChip(val, invert) {
+  // invert=true means: going up is BAD (e.g. chưa ký)
+  if (val === null || val === undefined) return '<span class="delta delta-zero">—</span>';
+  if (val === 0) return '<span class="delta delta-zero">±0</span>';
+  const up = val > 0;
+  const good = invert ? !up : up;
+  const cls = good ? 'delta-up' : 'delta-down';
+  return `<span class="delta ${cls}">${up ? '+' : ''}${val}</span>`;
+}
+
+function renderSnaps() {
+  const tb = document.getElementById('snapTable');
+  if (!snapData.length) {
+    tb.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:24px">Chưa có dữ liệu. Nhấn "+ Thêm thời điểm kiểm đếm".</td></tr>`;
+    return;
+  }
+  tb.innerHTML = snapData.map((s, i) => {
+    const prev = i > 0 ? snapData[i-1] : null;
+    const dSigned   = prev !== null ? s.signed   - prev.signed   : null;
+    const dStamped  = prev !== null ? s.stamped  - prev.stamped  : null;
+    const dUnsigned = prev !== null ? s.unsigned - prev.unsigned : null;
+    const isFirst = i === 0;
+    return `<tr style="${isFirst ? 'opacity:.75' : ''}">
+      <td style="color:var(--muted);font-weight:700">${i+1}</td>
+      <td>
+        <input type="datetime-local" value="${s.dt}"
+          onchange="snapData[${i}].dt=this.value;saveSnaps();renderSnaps()">
+      </td>
+      <td>
+        <input type="number" min="0" value="${s.signed}"
+          onchange="snapData[${i}].signed=+this.value;saveSnaps();renderSnaps()">
+      </td>
+      <td>${deltaChip(dSigned, false)}</td>
+      <td>
+        <input type="number" min="0" value="${s.stamped}"
+          onchange="snapData[${i}].stamped=+this.value;saveSnaps();renderSnaps()">
+      </td>
+      <td>${deltaChip(dStamped, false)}</td>
+      <td>
+        <input type="number" min="0" value="${s.unsigned}"
+          onchange="snapData[${i}].unsigned=+this.value;saveSnaps();renderSnaps()">
+      </td>
+      <td>${deltaChip(dUnsigned, true)}</td>
+      <td>
+        <input type="number" min="0" value="${s.pc09s}"
+          onchange="snapData[${i}].pc09s=+this.value;saveSnaps();renderSnaps()">
+      </td>
+      <td>
+        <input type="number" min="0" value="${s.pc09d}"
+          onchange="snapData[${i}].pc09d=+this.value;saveSnaps();renderSnaps()">
+      </td>
+      <td>
+        <input type="text" value="${s.note}" placeholder="Ghi chú…"
+          onchange="snapData[${i}].note=this.value;saveSnaps()" style="width:140px">
+      </td>
+      <td>
+        ${isFirst
+          ? '<span style="color:var(--muted);font-size:.7rem">Gốc</span>'
+          : `<button class="del-btn" onclick="snapData.splice(${i},1);saveSnaps();renderSnaps()">✕</button>`
+        }
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function addSnapshot() {
+  // Default: now datetime, copy last values as starting point
+  const last = snapData[snapData.length - 1];
+  const now = new Date();
+  const dt = now.toISOString().slice(0, 16);
+  snapData.push({
+    dt,
+    signed:   last ? last.signed   : 0,
+    stamped:  last ? last.stamped  : 0,
+    unsigned: last ? last.unsigned : 0,
+    pc09s:    last ? last.pc09s    : 0,
+    pc09d:    last ? last.pc09d    : 0,
+    note: ''
+  });
+  saveSnaps();
+  renderSnaps();
+  // Scroll to table
+  document.getElementById('snapTable').closest('.snap-wrap').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ─── Init ─── */
+renderKPI();
+renderProgress();
+renderPersonTable();
+renderSnaps();
+</script>
+</body>
+</html>
