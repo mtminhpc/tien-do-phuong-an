@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF (CAD) → DXF Converter</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --green: #3fb950;
+    --yellow: #d29922; --red: #f85149; --purple: #bc8cff; --orange: #ffa657;
+  }
+  body { font-family: system-ui, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px 16px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .header { text-align: center; margin-bottom: 24px; }
+  .header h1 { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #58a6ff, #bc8cff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+  .header p { color: var(--muted); font-size: .9rem; }
+
+  .drop {
+    border: 2px dashed var(--border); border-radius: 16px; background: var(--surface);
+    padding: 40px 20px; text-align: center; cursor: pointer; transition: .2s; margin-bottom: 20px;
+  }
+  .drop.over { border-color: var(--accent); background: var(--surface2); }
+  .drop .big { font-size: 2.4rem; margin-bottom: 8px; }
+  .drop .sub { color: var(--muted); font-size: .85rem; margin-top: 6px; }
+  input[type=file] { display: none; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 20px; }
+  .panel h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 14px; font-weight: 700; }
+
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+  .opt label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: 6px; }
+  .opt select, .opt input[type=text] {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 8px 10px; font-size: .85rem; font-family: inherit;
+  }
+  .check { display: flex; align-items: center; gap: 8px; font-size: .85rem; }
+  .check input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+  .btn {
+    background: linear-gradient(135deg, #238636, #2ea043); border: none; color: #fff;
+    padding: 11px 22px; border-radius: 9px; font-size: .9rem; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.alt { background: linear-gradient(135deg, #1f6feb, #388bfd); }
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+  .stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+  .stat .v { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+  .stat .l { font-size: .72rem; color: var(--muted); text-transform: uppercase; margin-top: 4px; }
+
+  #pageList { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .pgchip { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: .8rem; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .pgchip input { accent-color: var(--accent); }
+
+  canvas { max-width: 100%; border: 1px solid var(--border); border-radius: 10px; background: #fff; margin-top: 12px; }
+
+  .log { font-family: ui-monospace, Menlo, monospace; font-size: .78rem; background: #010409; border: 1px solid var(--border); border-radius: 10px; padding: 12px; max-height: 220px; overflow: auto; white-space: pre-wrap; line-height: 1.5; }
+  .log .ok { color: var(--green); } .log .warn { color: var(--yellow); } .log .err { color: var(--red); } .log .dim { color: var(--muted); }
+
+  .note { font-size: .78rem; color: var(--muted); background: rgba(88,166,255,.08); border: 1px solid rgba(88,166,255,.25); border-radius: 10px; padding: 12px 14px; line-height: 1.6; }
+  .hidden { display: none; }
+  footer { text-align: center; color: var(--muted); font-size: .75rem; padding-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <h1>📐 PDF (CAD) → DXF Converter</h1>
+    <p>Trích vector từ PDF xuất từ CAD và chuyển thành file DXF — chạy hoàn toàn trong trình duyệt</p>
+  </div>
+
+  <label class="drop" id="drop" for="fileInput">
+    <div class="big">📄 ➜ 📐</div>
+    <div><strong>Kéo-thả file PDF vào đây</strong> hoặc bấm để chọn</div>
+    <div class="sub">Nên dùng PDF xuất trực tiếp từ AutoCAD / phần mềm CAD (PDF vector). PDF scan/ảnh sẽ không có nét để trích.</div>
+    <input type="file" id="fileInput" accept="application/pdf,.pdf">
+  </label>
+
+  <div class="panel hidden" id="previewPanel">
+    <h2>📑 Tài liệu &amp; trang</h2>
+    <div class="stat-row" id="docStats"></div>
+    <div id="pageList"></div>
+    <canvas id="preview"></canvas>
+  </div>
+
+  <div class="panel hidden" id="optPanel">
+    <h2>⚙️ Tùy chọn xuất</h2>
+    <div class="opts">
+      <div class="opt">
+        <label>Đơn vị đầu ra</label>
+        <select id="unitSel">
+          <option value="pt">Points (1:1 — như PDF)</option>
+          <option value="mm" selected>Milimét (mm)</option>
+          <option value="in">Inch</option>
+          <option value="custom">Hệ số tùy chỉnh…</option>
+        </select>
+      </div>
+      <div class="opt">
+        <label>Hệ số nhân tọa độ (nếu chọn tùy chỉnh)</label>
+        <input type="text" id="customScale" value="1" inputmode="decimal">
+      </div>
+      <div class="opt">
+        <label>Độ mịn đường cong (số đoạn / bezier)</label>
+        <select id="bezSel">
+          <option value="8">Thấp (8)</option>
+          <option value="16" selected>Trung bình (16)</option>
+          <option value="32">Cao (32)</option>
+        </select>
+      </div>
+      <div class="opt" style="display:flex;flex-direction:column;justify-content:center;gap:10px;">
+        <label class="check"><input type="checkbox" id="incText" checked> Trích cả chữ (TEXT)</label>
+        <label class="check"><input type="checkbox" id="stackPages" checked> Xếp nhiều trang theo chiều dọc</label>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="convertBtn">🔄 Chuyển sang DXF &amp; tải về</button>
+      <span id="convStatus" style="font-size:.82rem;color:var(--muted)"></span>
+    </div>
+  </div>
+
+  <div class="panel hidden" id="logPanel">
+    <h2>🧾 Nhật ký xử lý</h2>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="note">
+    <strong>Lưu ý về độ chính xác &amp; offline:</strong><br>
+    • Công cụ trích <em>đường nét hình học</em> (line / polyline / cung / bezier) và chữ từ PDF — chính xác nhất với PDF vector xuất thẳng từ CAD.<br>
+    • Tọa độ gốc theo <em>points</em> (1/72 inch) của PDF; chọn đơn vị phù hợp hoặc nhập hệ số để khớp tỷ lệ bản vẽ thật trong CAD.<br>
+    • Thư viện đọc PDF (pdf.js) được tải từ CDN ở lần dùng đầu; sau khi trình duyệt cache lại thì dùng được offline. Muốn offline tuyệt đối: tải <code>pdf.min.js</code> + <code>pdf.worker.min.js</code> về cùng thư mục và sửa 2 đường dẫn script ở cuối file.
+  </div>
+
+  <footer>PDF → DXF · chạy client-side · v1.0</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+/* ───────── Setup pdf.js ───────── */
+const pdfjsLib = window['pdfjsLib'];
+if (pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+const OPS = pdfjsLib ? pdfjsLib.OPS : {};
+
+/* ───────── DOM ───────── */
+const $ = id => document.getElementById(id);
+const drop = $('drop'), fileInput = $('fileInput');
+const previewPanel = $('previewPanel'), optPanel = $('optPanel'), logPanel = $('logPanel');
+const docStats = $('docStats'), pageList = $('pageList'), preview = $('preview');
+const logEl = $('log'), convertBtn = $('convertBtn'), convStatus = $('convStatus');
+
+let pdfDoc = null, fileName = 'drawing', selectedPages = new Set();
+
+function log(msg, cls='') {
+  const span = document.createElement('div');
+  if (cls) span.className = cls;
+  span.textContent = msg;
+  logEl.appendChild(span);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+/* ───────── Drag & drop ───────── */
+['dragenter','dragover'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', ev => { const f = ev.dataTransfer.files[0]; if (f) loadFile(f); });
+fileInput.addEventListener('change', ev => { const f = ev.target.files[0]; if (f) loadFile(f); });
+
+/* ───────── Load PDF ───────── */
+async function loadFile(file) {
+  if (!pdfjsLib) { alert('Không tải được thư viện pdf.js. Cần kết nối mạng ở lần dùng đầu.'); return; }
+  if (!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)) { alert('Vui lòng chọn file PDF.'); return; }
+  fileName = file.name.replace(/\.pdf$/i, '') || 'drawing';
+  logPanel.classList.remove('hidden'); logEl.innerHTML = '';
+  log('Đang đọc: ' + file.name, 'dim');
+  try {
+    const buf = await file.arrayBuffer();
+    pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+    log('✓ Mở PDF thành công — ' + pdfDoc.numPages + ' trang', 'ok');
+    selectedPages = new Set(Array.from({length: pdfDoc.numPages}, (_, i) => i + 1));
+    renderDocInfo();
+    await renderPreview(1);
+    previewPanel.classList.remove('hidden');
+    optPanel.classList.remove('hidden');
+  } catch (e) {
+    log('✗ Lỗi đọc PDF: ' + e.message, 'err');
+  }
+}
+
+function renderDocInfo() {
+  docStats.innerHTML =
+    `<div class="stat"><div class="v">${pdfDoc.numPages}</div><div class="l">Tổng số trang</div></div>` +
+    `<div class="stat"><div class="v" id="selCount">${selectedPages.size}</div><div class="l">Trang sẽ xuất</div></div>`;
+  pageList.innerHTML = '';
+  for (let p = 1; p <= pdfDoc.numPages; p++) {
+    const chip = document.createElement('label');
+    chip.className = 'pgchip';
+    chip.innerHTML = `<input type="checkbox" ${selectedPages.has(p) ? 'checked' : ''}> Trang ${p}`;
+    const cb = chip.querySelector('input');
+    cb.addEventListener('change', () => {
+      cb.checked ? selectedPages.add(p) : selectedPages.delete(p);
+      $('selCount').textContent = selectedPages.size;
+    });
+    chip.addEventListener('click', ev => { if (ev.target.tagName !== 'INPUT') renderPreview(p); });
+    pageList.appendChild(chip);
+  }
+}
+
+async function renderPreview(pageNum) {
+  try {
+    const page = await pdfDoc.getPage(pageNum);
+    const scale = Math.min(900 / page.getViewport({ scale: 1 }).width, 1.5);
+    const viewport = page.getViewport({ scale });
+    const ctx = preview.getContext('2d');
+    preview.width = viewport.width; preview.height = viewport.height;
+    await page.render({ canvasContext: ctx, viewport }).promise;
+  } catch (e) { log('Không xem trước được trang ' + pageNum + ': ' + e.message, 'warn'); }
+}
+
+/* ───────── Matrix helpers (PDF convention) ───────── */
+function mTransform(m1, m2) {
+  return [
+    m1[0]*m2[0] + m1[2]*m2[1],
+    m1[1]*m2[0] + m1[3]*m2[1],
+    m1[0]*m2[2] + m1[2]*m2[3],
+    m1[1]*m2[2] + m1[3]*m2[3],
+    m1[0]*m2[4] + m1[2]*m2[5] + m1[4],
+    m1[1]*m2[4] + m1[3]*m2[5] + m1[5]
+  ];
+}
+function apply(p, m) { return [ p[0]*m[0] + p[1]*m[2] + m[4], p[0]*m[1] + p[1]*m[3] + m[5] ]; }
+
+/* ───────── Bezier tessellation ───────── */
+function bezierPts(p0, c1, c2, p1, steps) {
+  const out = [];
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps, u = 1 - t;
+    const x = u*u*u*p0[0] + 3*u*u*t*c1[0] + 3*u*t*t*c2[0] + t*t*t*p1[0];
+    const y = u*u*u*p0[1] + 3*u*u*t*c1[1] + 3*u*t*t*c2[1] + t*t*t*p1[1];
+    out.push([x, y]);
+  }
+  return out;
+}
+
+/* ───────── Extract one page → subpaths + texts (page space, y-up) ───────── */
+async function extractPage(pageNum, steps, withText) {
+  const page = await pdfDoc.getPage(pageNum);
+  const opList = await page.getOperatorList();
+  const view = page.view;                 // [x0, y0, x1, y1]
+  const pageH = view[3] - view[1];
+  const pageW = view[2] - view[0];
+
+  let ctm = [1, 0, 0, 1, 0, 0];
+  const stack = [];
+  const polylines = [];                   // {pts:[[x,y]...], closed}
+  let pending = [];                        // subpaths awaiting a paint op
+
+  const PAINT = new Set([OPS.stroke, OPS.closeStroke, OPS.fill, OPS.eoFill,
+    OPS.fillStroke, OPS.eoFillStroke, OPS.closeFillStroke, OPS.closeEOFillStroke, OPS.endPath]);
+
+  for (let i = 0; i < opList.fnArray.length; i++) {
+    const fn = opList.fnArray[i];
+    const args = opList.argsArray[i];
+    if (fn === OPS.save) { stack.push(ctm.slice()); }
+    else if (fn === OPS.restore) { if (stack.length) ctm = stack.pop(); }
+    else if (fn === OPS.transform) { ctm = mTransform(args, ctm); }
+    else if (fn === OPS.constructPath) {
+      const subs = buildPath(args[0], args[1], steps);
+      const m = ctm;
+      for (const s of subs) polylines.push({ pts: s.pts.map(p => apply(p, m)), closed: s.closed });
+    }
+    else if (PAINT.has(fn)) { pending = []; }
+  }
+
+  let texts = [];
+  if (withText) {
+    try {
+      const tc = await page.getTextContent();
+      for (const it of tc.items) {
+        const str = (it.str || '').trim();
+        if (!str) continue;
+        const t = it.transform;            // [a,b,c,d,e,f] in page space
+        const h = Math.hypot(t[2], t[3]) || Math.hypot(t[0], t[1]) || 10;
+        const rot = Math.atan2(t[1], t[0]) * 180 / Math.PI;
+        texts.push({ x: t[4], y: t[5], h, rot, str });
+      }
+    } catch (e) { log('  (trang ' + pageNum + ') không trích được chữ: ' + e.message, 'warn'); }
+  }
+  return { polylines, texts, pageW, pageH };
+}
+
+/* Parse a batched constructPath into subpaths */
+function buildPath(opsArr, coords, steps) {
+  const subs = [];
+  let sub = null, cur = null, j = 0;
+  const start = (x, y) => { sub = { pts: [[x, y]], closed: false }; subs.push(sub); cur = [x, y]; };
+  for (const op of opsArr) {
+    if (op === OPS.moveTo) { const x = coords[j++], y = coords[j++]; start(x, y); }
+    else if (op === OPS.lineTo) { const x = coords[j++], y = coords[j++]; if (!sub) start(x, y); else { sub.pts.push([x, y]); cur = [x, y]; } }
+    else if (op === OPS.curveTo) {
+      const c1 = [coords[j++], coords[j++]], c2 = [coords[j++], coords[j++]], p = [coords[j++], coords[j++]];
+      if (sub) { bezierPts(cur, c1, c2, p, steps).forEach(q => sub.pts.push(q)); cur = p; }
+    }
+    else if (op === OPS.curveTo2) {
+      const c2 = [coords[j++], coords[j++]], p = [coords[j++], coords[j++]];
+      if (sub) { bezierPts(cur, cur, c2, p, steps).forEach(q => sub.pts.push(q)); cur = p; }
+    }
+    else if (op === OPS.curveTo3) {
+      const c1 = [coords[j++], coords[j++]], p = [coords[j++], coords[j++]];
+      if (sub) { bezierPts(cur, c1, p, p, steps).forEach(q => sub.pts.push(q)); cur = p; }
+    }
+    else if (op === OPS.rectangle) {
+      const x = coords[j++], y = coords[j++], w = coords[j++], h = coords[j++];
+      subs.push({ pts: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]], closed: true });
+    }
+    else if (op === OPS.closePath) { if (sub) sub.closed = true; }
+  }
+  return subs;
+}
+
+/* ───────── DXF builder ───────── */
+function dxfBuilder() {
+  const lines = [];
+  const put = (code, val) => { lines.push(code); lines.push(String(val)); };
+  const layers = new Set(['0']);
+  const ents = [];
+  const r = n => (Math.round(n * 1e4) / 1e4);
+
+  return {
+    polyline(pts, closed, layer) {
+      layers.add(layer);
+      const e = [];
+      e.push(0, 'LWPOLYLINE', 8, layer, 90, pts.length, 70, closed ? 1 : 0);
+      for (const p of pts) { e.push(10, r(p[0]), 20, r(p[1])); }
+      ents.push(e);
+    },
+    text(t, layer) {
+      layers.add(layer);
+      const e = [0, 'TEXT', 8, layer, 10, r(t.x), 20, r(t.y), 30, 0, 40, r(t.h), 1, t.str];
+      if (Math.abs(t.rot) > 0.01) e.push(50, r(t.rot));
+      ents.push(e);
+    },
+    build() {
+      put(0, 'SECTION'); put(2, 'HEADER');
+      put(9, '$ACADVER'); put(1, 'AC1015');
+      put(9, '$INSUNITS'); put(70, 0);
+      put(0, 'ENDSEC');
+
+      put(0, 'SECTION'); put(2, 'TABLES');
+      put(0, 'TABLE'); put(2, 'LAYER'); put(70, layers.size);
+      for (const ly of layers) {
+        put(0, 'LAYER'); put(2, ly); put(70, 0); put(62, 7); put(6, 'CONTINUOUS');
+      }
+      put(0, 'ENDTAB'); put(0, 'ENDSEC');
+
+      put(0, 'SECTION'); put(2, 'ENTITIES');
+      for (const e of ents) for (let i = 0; i < e.length; i += 2) put(e[i], e[i + 1]);
+      put(0, 'ENDSEC');
+      put(0, 'EOF');
+      return lines.join('\n');
+    },
+    counts() { return { ents: ents.length, layers: layers.size }; }
+  };
+}
+
+/* ───────── Convert ───────── */
+convertBtn.addEventListener('click', convert);
+
+function scaleFactor() {
+  const sel = $('unitSel').value;
+  if (sel === 'pt') return 1;
+  if (sel === 'mm') return 25.4 / 72;
+  if (sel === 'in') return 1 / 72;
+  const c = parseFloat($('customScale').value);
+  return isFinite(c) && c > 0 ? c : 1;
+}
+
+async function convert() {
+  if (!pdfDoc) return;
+  const pages = [...selectedPages].sort((a, b) => a - b);
+  if (!pages.length) { alert('Chưa chọn trang nào.'); return; }
+
+  convertBtn.disabled = true; convStatus.textContent = 'Đang xử lý…';
+  const steps = parseInt($('bezSel').value, 10);
+  const withText = $('incText').checked;
+  const stack = $('stackPages').checked;
+  const sf = scaleFactor();
+
+  const dxf = dxfBuilder();
+  let yOffset = 0, totalPoly = 0, totalText = 0;
+
+  try {
+    for (const pg of pages) {
+      log(`Trang ${pg}: đang trích vector…`, 'dim');
+      const { polylines, texts, pageH } = await extractPage(pg, steps, withText);
+      const layer = 'PAGE_' + pg;
+      const oy = stack ? yOffset : 0;
+
+      for (const pl of polylines) {
+        if (pl.pts.length < 2) continue;
+        dxf.polyline(pl.pts.map(p => [p[0] * sf, (p[1] - oy) * sf]), pl.closed, layer);
+        totalPoly++;
+      }
+      for (const t of texts) {
+        dxf.text({ x: t.x * sf, y: (t.y - oy) * sf, h: t.h * sf, rot: t.rot, str: t.str }, layer);
+        totalText++;
+      }
+      log(`  ✓ ${polylines.length} đường nét, ${texts.length} đoạn chữ`, 'ok');
+      if (stack) yOffset += pageH + pageH * 0.08;   // gap between pages
+    }
+
+    const out = dxf.build();
+    const blob = new Blob([out], { type: 'application/dxf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fileName + '.dxf';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+
+    const c = dxf.counts();
+    log(`✓ XONG — ${totalPoly} polyline, ${totalText} text, ${c.layers} layer. Đã tải ${fileName}.dxf`, 'ok');
+    convStatus.textContent = `Hoàn tất: ${c.ents} đối tượng DXF.`;
+  } catch (e) {
+    log('✗ Lỗi chuyển đổi: ' + e.message, 'err');
+    convStatus.textContent = 'Có lỗi — xem nhật ký.';
+  } finally {
+    convertBtn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

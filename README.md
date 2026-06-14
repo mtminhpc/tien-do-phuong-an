@@ -42,3 +42,25 @@ Khi có đợt kiểm đếm mới:
 
 ## Phiên bản
 - v1.1 — 23/04/2026
+
+---
+
+# 📐 PDF (CAD) → DXF Converter
+
+File `pdf-to-dxf.html` là công cụ chuyển **PDF vector xuất từ CAD** thành file **`.dxf`**, chạy hoàn toàn trong trình duyệt (client-side).
+
+## Cách dùng
+1. Mở `pdf-to-dxf.html` bằng trình duyệt.
+2. Kéo-thả (hoặc chọn) file PDF.
+3. Chọn trang cần xuất, đặt đơn vị đầu ra (mm / inch / points) và tùy chọn.
+4. Bấm **"Chuyển sang DXF & tải về"** → tải file `.dxf` về máy, mở bằng AutoCAD / LibreCAD…
+
+## Trích được gì
+- Đường nét hình học: line, polyline, hình chữ nhật, cung/bezier (tessellate thành polyline).
+- Chữ (TEXT) kèm vị trí, chiều cao và góc xoay (tùy chọn bật/tắt).
+- Mỗi trang PDF đặt trên một layer riêng (`PAGE_n`).
+
+## Lưu ý
+- **Chính xác nhất với PDF vector** xuất thẳng từ phần mềm CAD. PDF scan/ảnh chụp không có nét vector để trích.
+- Tọa độ gốc theo *points* (1/72 inch); chọn đơn vị hoặc nhập hệ số nhân để khớp tỷ lệ bản vẽ thật.
+- Thư viện `pdf.js` tải từ CDN ở lần dùng đầu (sau đó trình duyệt cache lại). Muốn offline tuyệt đối: tải `pdf.min.js` + `pdf.worker.min.js` về cùng thư mục và sửa 2 đường dẫn `<script>` ở cuối file.
